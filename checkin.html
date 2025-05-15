@@ -1,0 +1,154 @@
+<!-- checkin.html (หน้าเช็กชื่อ พร้อมเชื่อม Web App Script) -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เช็กชื่อนักเรียน</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    h1, h2 { text-align: center; }
+    #studentTable { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.5rem; border: 1px solid #ccc; text-align: center; }
+    .status-btns button { margin: 0 0.25rem; }
+    .hidden { display: none; }
+    @media (max-width: 600px) {
+      td, th { font-size: 0.75rem; padding: 0.25rem; }
+      .status-btns button { font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>ระบบเช็กชื่อเข้าแถวและโฮมรูม</h1>
+  <p id="datetime"></p>
+
+  <label for="classSelect">เลือกห้องเรียน: </label>
+  <select id="classSelect"></select>
+
+  <table id="studentTable">
+    <thead>
+      <tr>
+        <th>เลขที่</th>
+        <th>ชื่อ-นามสกุล</th>
+        <th>สถานะ</th>
+      </tr>
+    </thead>
+    <tbody id="studentBody"></tbody>
+  </table>
+
+  <div style="text-align:center; margin-top:1rem">
+    <button onclick="submitData()">📤 ส่งข้อมูล</button>
+    <button onclick="resetStatus()">🔄 เริ่มตรวจวันนี้</button>
+  </div>
+
+  <script>
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbzzwGoC-jjV-tDS_Uh7B2t3ZkULJvEKzZkrjS8FCmGJ98i2abmINfwrn73A4R1SZ7Jp/exec"; // ✅ เชื่อม Web App
+    const studentData = {};
+    const selectedStatus = {}; // เก็บสถานะที่เลือก
+    const statuses = ["✅ เข้าแถว", "🚫 ลา", "❌ ขาด", "🏠 โฮมรูม", "❌ ไม่โฮมรูม"];
+
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById("datetime").textContent = now.toLocaleString("th-TH");
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    function loadStudentsByClass(className) {
+      const students = studentData[className] || [];
+      const tbody = document.getElementById("studentBody");
+      tbody.innerHTML = "";
+      students.forEach((stu, idx) => {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-index", idx);
+        tr.innerHTML = `
+          <td>${stu.no}</td>
+          <td>${stu.name}</td>
+          <td class="status-btns">
+            ${statuses.map(status => `<button onclick="selectStatus('${className}', ${idx}, '${status}')">${status}</button>`).join(" ")}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectStatus(className, index, status) {
+      const row = document.querySelector(`tr[data-index='${index}']`);
+      if (!selectedStatus[className]) selectedStatus[className] = {};
+      selectedStatus[className][index] = status;
+      row.querySelector(".status-btns").innerHTML = status;
+      row.classList.add("hidden");
+    }
+
+    async function submitData() {
+      const className = document.getElementById("classSelect").value;
+      const records = [];
+      const students = studentData[className] || [];
+
+      Object.entries(selectedStatus[className] || {}).forEach(([idx, status]) => {
+        const stu = students[idx];
+        records.push({
+          class: className,
+          no: stu.no,
+          name: stu.name,
+          status: status
+        });
+      });
+
+      if (records.length === 0) {
+        alert("ยังไม่ได้เลือกสถานะให้ใครเลย");
+        return;
+      }
+
+      try {
+        const res = await fetch(webAppUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records })
+        });
+
+        const text = await res.text();
+        if (text === "OK") {
+          alert("✅ บันทึกสำเร็จ");
+        } else {
+          alert("เกิดข้อผิดพลาด: " + text);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("❌ ไม่สามารถส่งข้อมูลได้");
+      }
+    }
+
+    function resetStatus() {
+      const className = document.getElementById("classSelect").value;
+      selectedStatus[className] = {};
+      loadStudentsByClass(className);
+    }
+
+    function loadClassOptions() {
+      const classSelect = document.getElementById("classSelect");
+      const classNames = Object.keys(studentData);
+      classSelect.innerHTML = classNames.map(cls => `<option value="${cls}">${cls}</option>`).join("");
+      classSelect.onchange = () => loadStudentsByClass(classSelect.value);
+      if (classNames.length > 0) {
+        classSelect.value = classNames[0];
+        loadStudentsByClass(classNames[0]);
+      }
+    }
+
+    async function loadStudentData() {
+      try {
+        const res = await fetch(webAppUrl);
+        const json = await res.json();
+        Object.assign(studentData, json);
+        loadClassOptions();
+      } catch (err) {
+        console.error(err);
+        alert("❌ โหลดรายชื่อไม่สำเร็จ");
+      }
+    }
+
+    loadStudentData();
+  </script>
+</body>
+</html>
