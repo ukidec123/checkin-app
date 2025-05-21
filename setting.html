@@ -82,7 +82,7 @@
           body: JSON.stringify({ students: studentList }) // ❌ ไม่ใส่ Content-Type เพื่อเลี่ยง CORS preflight
         });
         const result = await res.text();
-        alert(result === "ok" ? "✅ อัปโหลดสำเร็จ" : "❌ อัปโหลดล้มเหลว: " + result);
+        alert(result === "OK" ? "✅ อัปโหลดสำเร็จ" : "❌ อัปโหลดล้มเหลว: " + result);
       } catch (err) {
         alert("❌ เกิดข้อผิดพลาดในการอัปโหลด");
       }
