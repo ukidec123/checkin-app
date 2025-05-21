@@ -79,8 +79,7 @@
       try {
         const res = await fetch(webAppUrl + "?mode=upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ students: studentList })
+          body: JSON.stringify({ students: studentList }) // ❌ ไม่ใส่ Content-Type เพื่อเลี่ยง CORS preflight
         });
         const result = await res.text();
         alert(result === "OK" ? "✅ อัปโหลดสำเร็จ" : "❌ อัปโหลดล้มเหลว: " + result);
